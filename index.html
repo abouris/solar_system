@@ -1,0 +1,505 @@
+<html><head><base href="https://spacetime-simulator.com" />
+<title>SpaceTime Fabric Simulator - Interactive Celestial Bodies</title>
+<style>
+  body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #000;
+    color: #fff;
+    font-family: Arial, sans-serif;
+  }
+  #canvas-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+  canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  #controls {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 10px;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    max-width: 220px;
+  }
+  .control-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  label {
+    width: 120px;
+    margin-right: 10px;
+  }
+  input[type="range"] {
+    width: 100px;
+  }
+  #info-button, #start-over-button, #freeze-button {
+    background-color: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 10px;
+  }
+  #info-panel {
+    position: absolute;
+    top: 50px;
+    right: 10px;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 20px;
+    border-radius: 5px;
+    max-width: 300px;
+    display: none;
+  }
+  #zoom-controls {
+    position: absolute;
+    top: 140px;
+    left: 10px;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 10px;
+    border-radius: 5px;
+  }
+  #labels-index {
+    position: absolute;
+    top: 190px;
+    left: 10px;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 10px;
+    border-radius: 5px;
+    max-height: calc(100% - 210px);
+    overflow-y: auto;
+    width: 300px;
+  }
+  .planet-group {
+    margin-bottom: 15px;
+  }
+  .planet-name {
+    font-weight: bold;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+  }
+  .moon-list {
+    margin-left: 15px;
+  }
+  .celestial-body {
+    display: flex;
+    align-items: center;
+    margin-bottom: 3px;
+  }
+  .color-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 5px;
+    flex-shrink: 0;
+  }
+  .body-info {
+    font-size: 12px;
+    margin-left: 10px;
+    color: #ccc;
+  }
+  #top-right-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  #datetime-display {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #fff;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 5px 10px;
+    border-radius: 5px;
+  }
+</style>
+<script type="text/javascript" nonce="3ef5692b142a4420908a6375302" src="//local.adguard.org?ts=1720691028772&amp;type=content-script&amp;dmn=party.websim.ai&amp;url=https%3A%2F%2Fparty.websim.ai%2Fapi%2Fv1%2Fsites%2FHigRqLRnRZh5fHxFQ%2Fhtml%3Fraw%3Dtrue&amp;app=com.google.Chrome&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=1"></script>
+<script type="text/javascript" nonce="3ef5692b142a4420908a6375302" src="//local.adguard.org?ts=1720691028772&amp;name=AdGuard%20Assistant&amp;name=AdGuard%20Extra&amp;type=user-script"></script></head>
+<body>
+  <div id="canvas-container">
+    <canvas id="canvas"></canvas>
+  </div>
+  <div id="controls">
+    <div class="control-group">
+      <label for="speed">Simulation Speed:</label>
+      <input type="range" id="speed" min="0" max="100" value="50">
+      <span id="speedValue">50</span>
+    </div>
+    <div class="control-group">
+      <label for="trailLength">Trail Length:</label>
+      <input type="range" id="trailLength" min="0" max="1000" value="200">
+      <span id="trailLengthValue">200</span>
+    </div>
+    <div class="control-group">
+      <label for="trailOpacity">Trail Opacity:</label>
+      <input type="range" id="trailOpacity" min="0" max="100" value="50">
+      <span id="trailOpacityValue">50%</span>
+    </div>
+  </div>
+  <div id="zoom-controls">
+    <button id="zoom-in">Zoom In</button>
+    <button id="zoom-out">Zoom Out</button>
+  </div>
+  <div id="labels-index"></div>
+  <div id="top-right-controls">
+    <div>
+      <button id="freeze-button">Freeze Positions</button>
+      <button id="start-over-button">Start Over</button>
+      <button id="info-button">ℹ️ Info</button>
+    </div>
+    <div id="datetime-display"></div>
+  </div>
+  <div id="info-panel">
+    <h2>Dynamic SpaceTime Curvature Simulator</h2>
+    <p>This visualization demonstrates how planets and their moons dynamically distort the fabric of spacetime as they move. The grid represents spacetime, and its curvature illustrates gravity's effects according to Einstein's theory of general relativity.</p>
+    <p>Each planet and moon is represented by its first letter, with customizable orbital trails. Information about each celestial body is displayed next to its name in the index.</p>
+    <p>Use the sliders to adjust the simulation speed, trail length, and trail opacity. Observe how the spacetime fabric dynamically warps as celestial bodies orbit.</p>
+    <p>Use the zoom controls to get a closer or wider view of the solar system.</p>
+    <p>Click the "Start Over" button to reset the simulation to its initial state.</p>
+    <p>Click the "Freeze Positions" button to stop the planets and display the current date and time.</p>
+    <p><a href="https://spacetime-simulator.com/learn" style="color: #4a90e2;">Learn more about spacetime and general relativity</a></p>
+  </div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const speedSlider = document.getElementById('speed');
+const speedValue = document.getElementById('speedValue');
+const trailLengthSlider = document.getElementById('trailLength');
+const trailLengthValue = document.getElementById('trailLengthValue');
+const trailOpacitySlider = document.getElementById('trailOpacity');
+const trailOpacityValue = document.getElementById('trailOpacityValue');
+const infoButton = document.getElementById('info-button');
+const infoPanel = document.getElementById('info-panel');
+const zoomInButton = document.getElementById('zoom-in');
+const zoomOutButton = document.getElementById('zoom-out');
+const labelsIndex = document.getElementById('labels-index');
+const startOverButton = document.getElementById('start-over-button');
+const freezeButton = document.getElementById('freeze-button');
+const datetimeDisplay = document.getElementById('datetime-display');
+
+let simulationSpeed = 0.5;
+let zoomLevel = 1;
+let trailLength = 200;
+let trailOpacity = 0.5;
+let isSimulationRunning = true;
+let simulationStartTime = new Date();
+
+// Planet and moon data: name, color, radius, orbitRadius, angle, angularSpeed, mass, moons, description
+const initialCelestialBodies = [
+  {name: "Sun", color: "#FDB813", radius: 20, orbitRadius: 0, angle: 0, angularSpeed: 0, mass: 333000, moons: [], trail: [], description: "The star at the center of our Solar System."},
+  {name: "Mercury", color: "#B5B8B1", radius: 2, orbitRadius: 40, angle: 0, angularSpeed: 0.02, mass: 0.055, moons: [], trail: [], description: "The smallest planet in our Solar System and closest to the Sun."},
+  {name: "Venus", color: "#FFD700", radius: 3.5, orbitRadius: 70, angle: 0, angularSpeed: 0.015, mass: 0.815, moons: [], trail: [], description: "Often called Earth's sister planet due to their similar size and mass."},
+  {name: "Earth", color: "#6B93D6", radius: 4, orbitRadius: 100, angle: 0, angularSpeed: 0.01, mass: 1, moons: [
+    {name: "Moon", color: "#F5F3CE", radius: 1, orbitRadius: 8, angle: 0, angularSpeed: 0.05, mass: 0.0123, trail: [], description: "Earth's only natural satellite and the fifth largest moon in the Solar System."}
+  ], trail: [], description: "Our home planet, the only known celestial body to harbor life."},
+  {name: "Mars", color: "#E27B58", radius: 3, orbitRadius: 150, angle: 0, angularSpeed: 0.008, mass: 0.107, moons: [
+    {name: "Phobos", color: "#C0C0C0", radius: 0.5, orbitRadius: 5, angle: 0, angularSpeed: 0.08, mass: 0.000000001676, trail: [], description: "The larger and inner of Mars' two moons."},
+    {name: "Deimos", color: "#D3D3D3", radius: 0.3, orbitRadius: 7, angle: 0, angularSpeed: 0.06, mass: 0.000000000231, trail: [], description: "The smaller and outer of Mars' two moons."}
+  ], trail: [], description: "Often called the Red Planet, Mars is the focus of many exploration missions."},
+  {name: "Jupiter", color: "#C88B3A", radius: 12, orbitRadius: 250, angle: 0, angularSpeed: 0.004, mass: 317.8, moons: [
+    {name: "Io", color: "#FFFACD", radius: 1.2, orbitRadius: 15, angle: 0, angularSpeed: 0.07, mass: 0.015, trail: [], description: "The most volcanically active body in the Solar System."},
+    {name: "Europa", color: "#F0E68C", radius: 1, orbitRadius: 18, angle: 0, angularSpeed: 0.06, mass: 0.008, trail: [], description: "Believed to have a subsurface ocean of liquid water."},
+    {name: "Ganymede", color: "#DEB887", radius: 1.5, orbitRadius: 22, angle: 0, angularSpeed: 0.05, mass: 0.025, trail: [], description: "The largest moon in the Solar System, larger than Mercury."},
+    {name: "Callisto", color: "#D2B48C", radius: 1.4, orbitRadius: 26, angle: 0, angularSpeed: 0.04, mass: 0.018, trail: [], description: "The most heavily cratered object in the Solar System."}
+  ], trail: [], description: "The largest planet in our Solar System, a gas giant with a Great Red Spot."},
+  {name: "Saturn", color: "#E4D191", radius: 10, orbitRadius: 350, angle: 0, angularSpeed: 0.002, mass: 95.2, moons: [
+    {name: "Titan", color: "#FFE4B5", radius: 1.6, orbitRadius: 20, angle: 0, angularSpeed: 0.05, mass: 0.0225, trail: [], description: "The only moon known to have dense atmospheres."}
+  ], trail: [], description: "Known for its prominent ring system, Saturn is a gas giant planet."},
+  {name: "Uranus", color: "#CBF1FF", radius: 7, orbitRadius: 450, angle: 0, angularSpeed: 0.0009, mass: 14.5, moons: [
+    {name: "Miranda", color: "#F0FFF0", radius: 0.8, orbitRadius: 12, angle: 0, angularSpeed: 0.06, mass: 0.000011, trail: [], description: "Has one of the strangest and most varied landscapes among extraterrestrial bodies."}
+  ], trail: [], description: "An ice giant planet, Uranus is tilted so far that it essentially orbits on its side."},
+  {name: "Neptune", color: "#4B70DD", radius: 6.5, orbitRadius: 550, angle: 0, angularSpeed: 0.0005, mass: 17.1, moons: [
+    {name: "Triton", color: "#E6E6FA", radius: 1.1, orbitRadius: 14, angle: 0, angularSpeed: 0.07, mass: 0.003588, trail: [], description: "The only large moon in the Solar System with a retrograde orbit."}
+  ], trail: [], description: "The windiest planet in the Solar System, Neptune is the last of the ice giants."}
+];
+
+let celestialBodies = JSON.parse(JSON.stringify(initialCelestialBodies));
+
+function createLabelsIndex() {
+  labelsIndex.innerHTML = '';
+  celestialBodies.forEach(planet => {
+    const planetGroup = document.createElement('div');
+    planetGroup.className = 'planet-group';
+
+    const planetName = document.createElement('div');
+    planetName.className = 'planet-name';
+    planetName.innerHTML = `
+      <span class="color-dot" style="background-color: ${planet.color};"></span>
+      ${planet.name}
+      <span class="body-info">Mass: ${planet.mass} Earth masses, Orbit: ${planet.orbitRadius}</span>
+    `;
+    planetGroup.appendChild(planetName);
+
+    const planetDescription = document.createElement('div');
+    planetDescription.className = 'body-info';
+    planetDescription.textContent = planet.description;
+    planetGroup.appendChild(planetDescription);
+
+    if (planet.moons.length > 0) {
+      const moonList = document.createElement('div');
+      moonList.className = 'moon-list';
+      planet.moons.forEach(moon => {
+        const moonItem = document.createElement('div');
+        moonItem.className = 'celestial-body';
+        moonItem.innerHTML = `
+          <span class="color-dot" style="background-color: ${moon.color};"></span>
+          ${moon.name}
+          <span class="body-info">Mass: ${moon.mass} Earth masses, Orbit: ${moon.orbitRadius}</span>
+        `;
+        const moonDescription = document.createElement('div');
+        moonDescription.className = 'body-info';
+        moonDescription.textContent = moon.description;
+        moonList.appendChild(moonItem);
+        moonList.appendChild(moonDescription);
+      });
+      planetGroup.appendChild(moonList);
+    }
+
+    labelsIndex.appendChild(planetGroup);
+  });
+}
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+
+function distortSpacetime(x, y) {
+  let distortion = 0;
+  celestialBodies.forEach(planet => {
+    const dx = x - (canvas.width / 2 + planet.orbitRadius * Math.cos(planet.angle) * zoomLevel);
+    const dy = y - (canvas.height / 2 + planet.orbitRadius * Math.sin(planet.angle) * zoomLevel);
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    distortion += (planet.mass * zoomLevel) / (distance + 1);
+
+    planet.moons.forEach(moon => {
+      const moonX = canvas.width / 2 + planet.orbitRadius * Math.cos(planet.angle) * zoomLevel + moon.orbitRadius * Math.cos(moon.angle) * zoomLevel;
+      const moonY = canvas.height / 2 + planet.orbitRadius * Math.sin(planet.angle) * zoomLevel + moon.orbitRadius * Math.sin(moon.angle) * zoomLevel;
+      const moonDx = x - moonX;
+      const moonDy = y - moonY;
+      const moonDistance = Math.sqrt(moonDx * moonDx + moonDy * moonDy);
+      distortion += (moon.mass * zoomLevel) / (moonDistance + 1);
+    });
+  });
+  return Math.min(distortion, 40 * zoomLevel);
+}
+
+function drawDistortedSpacetime() {
+  const gridSize = 20 * zoomLevel;
+  const rows = Math.ceil(canvas.height / gridSize);
+  const cols = Math.ceil(canvas.width / gridSize);
+
+  ctx.strokeStyle = "#444";
+  ctx.lineWidth = 0.5;
+
+  // Draw vertical lines
+  for (let x = 0; x <= cols; x++) {
+    ctx.beginPath();
+    for (let y = 0; y <= rows; y++) {
+      const distortion = distortSpacetime(x * gridSize, y * gridSize);
+      const offsetX = x * gridSize + distortion;
+      const offsetY = y * gridSize;
+      if (y === 0) {
+        ctx.moveTo(offsetX, offsetY);
+      } else {
+        ctx.lineTo(offsetX, offsetY);
+      }
+    }
+    ctx.stroke();
+  }
+
+  // Draw horizontal lines
+  for (let y = 0; y <= rows; y++) {
+    ctx.beginPath();
+    for (let x = 0; x <= cols; x++) {
+      const distortion = distortSpacetime(x * gridSize, y * gridSize);
+      const offsetX = x * gridSize;
+      const offsetY = y * gridSize + distortion;
+      if (x === 0) {
+        ctx.moveTo(offsetX, offsetY);
+      } else {
+        ctx.lineTo(offsetX, offsetY);
+      }
+    }
+    ctx.stroke();
+  }
+}
+
+function drawCelestialBody(body, x, y) {
+  // Draw celestial body
+  ctx.beginPath();
+  ctx.arc(x, y, body.radius * zoomLevel, 0, Math.PI * 2);
+  ctx.fillStyle = body.color;
+  ctx.fill();
+
+  // Draw label
+  ctx.fillStyle = "#fff";
+  ctx.font = `bold ${12 * zoomLevel}px Arial`;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  const labelX = x + (body.radius + 2) * zoomLevel;
+  const labelY = y;
+  ctx.fillText(body.name.charAt(0), labelX, labelY);
+
+  // Draw trail
+  ctx.beginPath();
+  ctx.strokeStyle = body.color;
+  ctx.lineWidth = 0.5;
+  body.trail.forEach((point, index) => {
+    const alpha = (index / body.trail.length) * trailOpacity;
+    ctx.strokeStyle = `rgba(${hexToRgb(body.color)},${alpha})`;
+    if (index === 0) {
+      ctx.moveTo(point.x, point.y);
+    } else {
+      ctx.lineTo(point.x, point.y);
+    }
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(point.x, point.y);
+  });
+}
+
+function hexToRgb(hex) {
+  const bigint = parseInt(hex.slice(1), 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return r + "," + g + "," + b;
+}
+
+function drawPlanetSystem(planet) {
+  const x = canvas.width / 2 + planet.orbitRadius * Math.cos(planet.angle) * zoomLevel;
+  const y = canvas.height / 2 + planet.orbitRadius * Math.sin(planet.angle) * zoomLevel;
+
+  drawCelestialBody(planet, x, y);
+
+  // Draw moons
+  planet.moons.forEach(moon => {
+    const moonX = x + moon.orbitRadius * Math.cos(moon.angle) * zoomLevel;
+    const moonY = y + moon.orbitRadius * Math.sin(moon.angle) * zoomLevel;
+    drawCelestialBody(moon, moonX, moonY);
+  });
+}
+
+function update() {
+  if (isSimulationRunning) {
+    celestialBodies.forEach(planet => {
+      planet.angle += planet.angularSpeed * simulationSpeed;
+      updateTrail(planet, canvas.width / 2 + planet.orbitRadius * Math.cos(planet.angle) * zoomLevel, canvas.height / 2 + planet.orbitRadius * Math.sin(planet.angle) * zoomLevel);
+
+      planet.moons.forEach(moon => {
+        moon.angle += moon.angularSpeed * simulationSpeed;
+        const moonX = canvas.width / 2 + planet.orbitRadius * Math.cos(planet.angle) * zoomLevel + moon.orbitRadius * Math.cos(moon.angle) * zoomLevel;
+        const moonY = canvas.height / 2 + planet.orbitRadius * Math.sin(planet.angle) * zoomLevel + moon.orbitRadius * Math.sin(moon.angle) * zoomLevel;
+        updateTrail(moon, moonX, moonY);
+      });
+    });
+  }
+}
+
+function updateTrail(body, x, y) {
+  body.trail.push({x, y});
+  if (body.trail.length > trailLength) {
+    body.trail.shift();
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawDistortedSpacetime();
+  celestialBodies.forEach(drawPlanetSystem);
+}
+
+function animate() {
+  update();
+  draw();
+  requestAnimationFrame(animate);
+}
+
+function startOver() {
+  celestialBodies = JSON.parse(JSON.stringify(initialCelestialBodies));
+  zoomLevel = 1;
+  simulationSpeed = 0.5;
+  trailLength = 200;
+  trailOpacity = 0.5;
+  isSimulationRunning = true;
+  simulationStartTime = new Date();
+  
+  speedSlider.value = 50;
+  speedValue.textContent = '50';
+  trailLengthSlider.value = 200;
+  trailLengthValue.textContent = '200';
+  trailOpacitySlider.value = 50;
+  trailOpacityValue.textContent = '50%';
+  
+  createLabelsIndex();
+  datetimeDisplay.textContent = '';
+}
+
+function freezePositions() {
+  isSimulationRunning = !isSimulationRunning;
+  if (!isSimulationRunning) {
+    const currentDate = new Date();
+    const elapsedTime = (currentDate - simulationStartTime) * simulationSpeed;
+    const simulatedDate = new Date(simulationStartTime.getTime() + elapsedTime);
+    datetimeDisplay.textContent = `Simulated Date: ${simulatedDate.toLocaleString()}`;
+  } else {
+    datetimeDisplay.textContent = '';
+  }
+}
+
+speedSlider.addEventListener('input', (e) => {
+  simulationSpeed = e.target.value / 50;
+  speedValue.textContent = e.target.value;
+});
+
+trailLengthSlider.addEventListener('input', (e) => {
+  trailLength = parseInt(e.target.value);
+  trailLengthValue.textContent = trailLength;
+});
+
+trailOpacitySlider.addEventListener('input', (e) => {
+  trailOpacity = e.target.value / 100;
+  trailOpacityValue.textContent = `${e.target.value}%`;
+});
+
+infoButton.addEventListener('click', () => {
+  infoPanel.style.display = infoPanel.style.display === 'none' ? 'block' : 'none';
+});
+
+zoomInButton.addEventListener('click', () => {
+  zoomLevel *= 1.2;
+});
+
+zoomOutButton.addEventListener('click', () => {
+  zoomLevel /= 1.2;
+});
+
+startOverButton.addEventListener('click', startOver);
+freezeButton.addEventListener('click', freezePositions);
+
+window.addEventListener('resize', resizeCanvas);
+
+resizeCanvas();
+createLabelsIndex();
+animate();
+</script>
+
+</body></html>
